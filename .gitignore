@@ -1,0 +1,4 @@
+chapters/
+*.pdf
+__pycache__/
+*.pyc
