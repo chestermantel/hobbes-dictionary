@@ -307,15 +307,17 @@ const CHAPTER_ORDER = [
   'XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV',
   'XXVI','XXVII','XXVIII','XXIX','XXX','XXXI',
   'XXXII','XXXIII','XXXIV','XXXV','XXXVI','XXXVII','XXXVIII','XXXIX','XL','XLI','XLII','XLIII',
-  'XLIV','XLV','XLVI','XLVII'
+  'XLIV','XLV','XLVI','XLVII',
+  '1061'
 ];
 const BOOK_RANGES = {
   'I':   ['Intro','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI'],
   'II':  ['XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV','XXVI','XXVII','XXVIII','XXIX','XXX','XXXI'],
   'III': ['XXXII','XXXIII','XXXIV','XXXV','XXXVI','XXXVII','XXXVIII','XXXIX','XL','XLI','XLII','XLIII'],
   'IV':  ['XLIV','XLV','XLVI','XLVII'],
+  '1061': ['1061'],
 };
-const BOOK_TITLES = { 'I':'Of Man', 'II':'Of Commonwealth', 'III':'Of a Christian Commonwealth', 'IV':'Of the Kingdom of Darkness' };
+const BOOK_TITLES = { 'I':'Of Man', 'II':'Of Commonwealth', 'III':'Of a Christian Commonwealth', 'IV':'Of the Kingdom of Darkness', '1061':'Of the Class' };
 
 function chapterIdx(ch) {
   const m = ch.match(/Chapter ([IVXLCDM]+|Intro):/);
@@ -457,7 +459,7 @@ function render() {
 function showHome() {
   setBreadcrumb([]);
   const total = DATA.entries.length;
-  const books = ['I','II','III','IV'].map(b => {
+  const books = ['I','II','III','IV','1061'].map(b => {
     const range = BOOK_RANGES[b];
     const count = range.reduce((n, r) => {
       const ch = sortedChapters.find(c => chapterRoman(c) === r);
