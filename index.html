@@ -458,6 +458,26 @@ function showBook(book) {
   const chs = sortedChapters.filter(c => range.includes(chapterRoman(c)));
   const total = chs.reduce((n, c) => n + chapters[c].length, 0);
 
+  // If only one chapter, skip the chapter list and show definitions directly
+  if (chs.length === 1) {
+    const ents = chapters[chs[0]];
+    setBreadcrumb([{label:`Book ${book}: ${title}`, href:`/book/${book}`}]);
+    const p = document.getElementById('page-book');
+    p.innerHTML = `
+      <a class="back-btn" href="#/">← Books</a>
+      <h1 class="page-title">Book ${book}: ${esc(title)}</h1>
+      <p class="page-subtitle">${total} definitions</p>
+      <ul class="def-list">
+        ${ents.map(e => `
+          <li><a class="def-item" href="#/term/${encodeURIComponent(e.slug)}">
+            <div class="def-term">${esc(e.term)}</div>
+            <div class="def-preview">${esc(e.definition.slice(0,130))}${e.definition.length>130?'&hellip;':''}</div>
+          </a></li>`).join('')}
+      </ul>`;
+    p.classList.add('active');
+    return;
+  }
+
   setBreadcrumb([{label:`Book ${book}: ${title}`, href:`/book/${book}`}]);
   const p = document.getElementById('page-book');
   p.innerHTML = `
@@ -510,11 +530,11 @@ function showTerm(slug) {
   const title  = chapterTitle(first.chapter);
   const allRefs = [...new Set(ents.flatMap(e => e.cross_refs))].sort();
 
-  setBreadcrumb([
-    {label:`Book ${book}`, href:`/book/${book}`},
-    {label:`Ch. ${roman}`, href:`/chapter/${roman}`},
-    {label:first.term, href:`/term/${slug}`}
-  ]);
+  const singleChapterBook = (BOOK_RANGES[book] || []).length === 1;
+  setBreadcrumb(singleChapterBook
+    ? [{label:`Book ${book}`, href:`/book/${book}`}, {label:first.term, href:`/term/${slug}`}]
+    : [{label:`Book ${book}`, href:`/book/${book}`}, {label:`Ch. ${roman}`, href:`/chapter/${roman}`}, {label:first.term, href:`/term/${slug}`}]
+  );
 
   const blocksHtml = ents.map(e => {
     const chRoman = chapterRoman(e.chapter);
@@ -549,7 +569,7 @@ function showTerm(slug) {
 
   const p = document.getElementById('page-term');
   p.innerHTML = `
-    <a class="back-btn" href="#/chapter/${roman}">← ${esc(title)}</a>
+    <a class="back-btn" href="${singleChapterBook ? `#/book/${book}` : `#/chapter/${roman}`}">← ${singleChapterBook ? `Book ${book}: ${esc(BOOK_TITLES[book]||'')}` : esc(title)}</a>
     <div class="def-detail">
       <h1 class="term-heading">${esc(first.term)}</h1>
       ${multiNote}
