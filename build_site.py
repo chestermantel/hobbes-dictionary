@@ -27,8 +27,6 @@ with open(f"{BASE}/hobbes_dictionary.csv", encoding='utf-8') as f:
 
 data_json = json.dumps({'entries': entries}, ensure_ascii=False)
 
-# ── HTML ─────────────────────────────────────────────────────────────────────
-
 HTML = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -72,17 +70,66 @@ HTML = r"""<!DOCTYPE html>
     .site-title {
       font-size: 1rem; font-weight: normal;
       letter-spacing: .06em; color: var(--gold);
-      white-space: nowrap; text-decoration: none;
+      white-space: nowrap; text-decoration: none; flex-shrink: 0;
     }
     .site-title:hover { color: #fff; }
     .header-sep { color: #3a5070; flex-shrink: 0; }
     .breadcrumb {
       display: flex; align-items: center; gap: .4rem;
-      font-size: .8rem; color: #8899aa; flex-wrap: wrap;
+      font-size: .8rem; color: #8899aa; flex-wrap: wrap; flex: 1;
+      overflow: hidden;
     }
-    .breadcrumb a { color: #aabbcc; text-decoration: none; }
+    .breadcrumb a { color: #aabbcc; text-decoration: none; white-space: nowrap; }
     .breadcrumb a:hover { color: #fff; text-decoration: underline; }
     .breadcrumb .sep { color: #4a6080; }
+    .breadcrumb span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ── Search ── */
+    .search-wrap {
+      position: relative; flex-shrink: 0;
+    }
+    .search-input {
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 4px;
+      color: white; font-size: .82rem; font-family: inherit;
+      padding: .35rem .7rem .35rem 1.9rem;
+      width: 200px; outline: none;
+      transition: all .2s;
+    }
+    .search-input::placeholder { color: rgba(255,255,255,.4); }
+    .search-input:focus {
+      background: rgba(255,255,255,.18);
+      border-color: rgba(255,255,255,.4);
+      width: 240px;
+    }
+    .search-icon {
+      position: absolute; left: .55rem; top: 50%; transform: translateY(-50%);
+      color: rgba(255,255,255,.4); font-size: .8rem; pointer-events: none;
+    }
+    .search-dropdown {
+      display: none;
+      position: absolute; top: calc(100% + 4px); right: 0;
+      background: white; border: 1px solid var(--border-dk);
+      border-radius: 4px; box-shadow: 0 6px 20px rgba(0,0,0,.18);
+      min-width: 300px; max-width: 400px;
+      max-height: 360px; overflow-y: auto;
+      z-index: 200;
+    }
+    .search-dropdown.open { display: block; }
+    .search-result {
+      display: block; padding: .55rem .85rem;
+      text-decoration: none; border-bottom: 1px solid #eee;
+      cursor: pointer; transition: background .1s;
+    }
+    .search-result:last-child { border-bottom: none; }
+    .search-result:hover, .search-result.focused { background: var(--parchment-dk); }
+    .sr-term { font-size: .88rem; color: var(--navy); }
+    .sr-term mark { background: none; color: var(--brown); font-weight: bold; }
+    .sr-chapter { font-size: .72rem; color: var(--text-lt); font-style: italic; margin-top: .1rem; }
+    .search-no-results {
+      padding: .7rem .85rem; font-size: .82rem; color: var(--text-lt); font-style: italic;
+    }
 
     /* ── Layout ── */
     main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
@@ -172,8 +219,6 @@ HTML = r"""<!DOCTYPE html>
       border-bottom: 2px solid var(--border); padding-bottom: .5rem;
       margin-bottom: 1.25rem;
     }
-
-    /* one definition block */
     .def-block { margin-bottom: 2rem; }
     .def-block + .def-block {
       border-top: 1px solid var(--border); padding-top: 1.75rem;
@@ -186,7 +231,7 @@ HTML = r"""<!DOCTYPE html>
     .def-chapter-label a:hover { text-decoration: underline; }
     .def-body {
       font-size: 1.05rem; line-height: 1.8; color: var(--text);
-      margin-bottom: 1rem;
+      margin-bottom: .75rem;
     }
     .def-body a.term-link {
       color: var(--brown); text-decoration: underline;
@@ -195,38 +240,36 @@ HTML = r"""<!DOCTYPE html>
     .def-body a.term-link:hover {
       text-decoration-style: solid; color: var(--brown-lt);
     }
+    /* Compact context — just a small footnote line */
     .def-context {
-      background: var(--parchment-dk); border-left: 3px solid var(--border-dk);
-      padding: .55rem .85rem; font-size: .82rem; color: var(--text-lt);
-      font-style: italic;
+      font-size: .75rem; color: var(--text-lt); font-style: italic;
+      padding-left: .75rem; border-left: 2px solid var(--border);
+      line-height: 1.4;
     }
 
     /* ── See Also ── */
-    .see-also { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+    .see-also { margin-top: 1.75rem; padding-top: 1.1rem; border-top: 1px solid var(--border); }
     .see-also h3 {
-      font-size: .75rem; text-transform: uppercase; letter-spacing: .1em;
-      color: var(--text-lt); margin-bottom: .65rem; font-weight: normal;
+      font-size: .72rem; text-transform: uppercase; letter-spacing: .1em;
+      color: var(--text-lt); margin-bottom: .6rem; font-weight: normal;
     }
-    .see-also-links { display: flex; flex-wrap: wrap; gap: .45rem; }
+    .see-also-links { display: flex; flex-wrap: wrap; gap: .4rem; }
     .see-also-link {
-      display: inline-block; padding: .28rem .65rem;
+      display: inline-block; padding: .25rem .6rem;
       background: white; border: 1px solid var(--border-dk);
-      color: var(--navy); text-decoration: none; font-size: .8rem;
+      color: var(--navy); text-decoration: none; font-size: .78rem;
       border-radius: 2px; transition: all .15s;
     }
     .see-also-link:hover { background: var(--navy); color: white; border-color: var(--navy); }
 
     /* ── Misc ── */
-    .tag-context {
-      font-size: .72rem; color: var(--text-lt);
-      background: var(--parchment-dk); border: 1px solid var(--border);
-      padding: .1rem .4rem; border-radius: 2px; margin-left: .4rem;
-    }
-    .empty { text-align: center; color: var(--text-lt); padding: 3rem; font-style: italic; }
-    @media (max-width: 600px) {
+    @media (max-width: 680px) {
       main { padding: 1rem; }
       .chapter-grid { grid-template-columns: 1fr; }
       .term-heading { font-size: 1.5rem; }
+      .search-input { width: 130px; }
+      .search-input:focus { width: 160px; }
+      .search-dropdown { min-width: 240px; }
     }
   </style>
 </head>
@@ -237,6 +280,12 @@ HTML = r"""<!DOCTYPE html>
     <a class="site-title" href="#/">Hobbes Dictionary</a>
     <span class="header-sep">|</span>
     <nav class="breadcrumb" id="breadcrumb"></nav>
+    <div class="search-wrap">
+      <span class="search-icon">&#9906;</span>
+      <input class="search-input" id="search-input" type="text"
+             placeholder="Search terms&hellip;" autocomplete="off" spellcheck="false">
+      <div class="search-dropdown" id="search-dropdown"></div>
+    </div>
   </div>
 </header>
 
@@ -251,17 +300,38 @@ HTML = r"""<!DOCTYPE html>
 // ── Data ─────────────────────────────────────────────────────────────────────
 const DATA = DATAPLACEHOLDER;
 
-const CHAPTER_ORDER = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI'];
+const CHAPTER_ORDER = [
+  'Intro',
+  'I','II','III','IV','V','VI','VII','VIII','IX','X',
+  'XI','XII','XIII','XIV','XV','XVI',
+  'XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV',
+  'XXVI','XXVII','XXVIII','XXIX','XXX','XXXI',
+  'XXXII','XXXIII','XXXIV','XXXV','XXXVI','XXXVII','XXXVIII','XXXIX','XL','XLI','XLII','XLIII',
+  'XLIV','XLV','XLVI','XLVII'
+];
+const BOOK_RANGES = {
+  'I':   ['Intro','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI'],
+  'II':  ['XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV','XXVI','XXVII','XXVIII','XXIX','XXX','XXXI'],
+  'III': ['XXXII','XXXIII','XXXIV','XXXV','XXXVI','XXXVII','XXXVIII','XXXIX','XL','XLI','XLII','XLIII'],
+  'IV':  ['XLIV','XLV','XLVI','XLVII'],
+};
+const BOOK_TITLES = { 'I':'Of Man', 'II':'Of Commonwealth', 'III':'Of a Christian Commonwealth', 'IV':'Of the Kingdom of Darkness' };
 
 function chapterIdx(ch) {
-  const m = ch.match(/Chapter ([IVXLCDM]+):/);
-  return m ? CHAPTER_ORDER.indexOf(m[1]) : 99;
+  const m = ch.match(/Chapter ([IVXLCDM]+|Intro):/);
+  return m ? CHAPTER_ORDER.indexOf(m[1]) : 999;
 }
 function chapterRoman(ch) {
-  const m = ch.match(/Chapter ([IVXLCDM]+):/); return m ? m[1] : '';
+  const m = ch.match(/Chapter ([IVXLCDM]+|Intro):/); return m ? m[1] : '';
 }
 function chapterTitle(ch) {
-  const m = ch.match(/Chapter [IVXLCDM]+: (.+)/); return m ? m[1] : ch;
+  const m = ch.match(/Chapter (?:[IVXLCDM]+|Intro): (.+)/); return m ? m[1] : ch;
+}
+function bookOfChapter(roman) {
+  for (const [b, chs] of Object.entries(BOOK_RANGES)) {
+    if (chs.includes(roman)) return b;
+  }
+  return 'I';
 }
 function makeSlug(t) {
   return t.toLowerCase().replace(/[^\w\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
@@ -272,10 +342,8 @@ function esc(s) {
 function escRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
 
 // ── Indexes ──────────────────────────────────────────────────────────────────
-// slug → [entries] (may have multiple definitions per term)
-const slugIndex = {};
-// chapter string → [entries] in original CSV order
-const chapters = {};
+const slugIndex  = {};   // slug → [entries]
+const chapters   = {};   // chapter string → [entries]
 
 for (const e of DATA.entries) {
   if (!slugIndex[e.slug]) slugIndex[e.slug] = [];
@@ -286,9 +354,89 @@ for (const e of DATA.entries) {
 
 const sortedChapters = Object.keys(chapters).sort((a,b) => chapterIdx(a) - chapterIdx(b));
 
-// ── Routing ───────────────────────────────────────────────────────────────────
-function navigate(path) { window.location.hash = '#' + path; }
+// Flat sorted list of unique terms for search
+const searchTerms = Object.entries(slugIndex).map(([slug, arr]) => ({
+  slug,
+  term:    arr[0].term,
+  chapter: arr[0].chapter,
+})).sort((a,b) => a.term.localeCompare(b.term));
 
+// ── Search ───────────────────────────────────────────────────────────────────
+const searchInput    = document.getElementById('search-input');
+const searchDropdown = document.getElementById('search-dropdown');
+let focusedIdx = -1;
+
+function showSearch(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) { closeSearch(); return; }
+
+  // Rank: starts-with > contains, term name first, then definition
+  const results = [];
+  for (const t of searchTerms) {
+    const tl = t.term.toLowerCase();
+    if (tl.startsWith(q))      results.push({...t, rank: 0});
+    else if (tl.includes(q))   results.push({...t, rank: 1});
+  }
+  results.sort((a,b) => a.rank - b.rank || a.term.localeCompare(b.term));
+  const top = results.slice(0, 12);
+
+  focusedIdx = -1;
+  if (!top.length) {
+    searchDropdown.innerHTML = `<div class="search-no-results">No terms found</div>`;
+  } else {
+    searchDropdown.innerHTML = top.map((r, i) => {
+      const hl = esc(r.term).replace(
+        new RegExp('(' + escRe(esc(q)) + ')', 'gi'),
+        '<mark>$1</mark>'
+      );
+      const chRoman = chapterRoman(r.chapter);
+      const bk = bookOfChapter(chRoman);
+      return `<a class="search-result" href="#/term/${encodeURIComponent(r.slug)}" data-i="${i}">
+        <div class="sr-term">${hl}</div>
+        <div class="sr-chapter">Book ${bk} &middot; Ch. ${chRoman}: ${esc(chapterTitle(r.chapter))}</div>
+      </a>`;
+    }).join('');
+  }
+  searchDropdown.classList.add('open');
+}
+
+function closeSearch() {
+  searchDropdown.classList.remove('open');
+  focusedIdx = -1;
+}
+
+searchInput.addEventListener('input', () => showSearch(searchInput.value));
+searchInput.addEventListener('focus', () => { if (searchInput.value) showSearch(searchInput.value); });
+
+searchInput.addEventListener('keydown', e => {
+  const items = searchDropdown.querySelectorAll('.search-result');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    focusedIdx = Math.min(focusedIdx + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('focused', i === focusedIdx));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    focusedIdx = Math.max(focusedIdx - 1, -1);
+    items.forEach((el, i) => el.classList.toggle('focused', i === focusedIdx));
+  } else if (e.key === 'Enter') {
+    if (focusedIdx >= 0 && items[focusedIdx]) {
+      window.location.href = items[focusedIdx].href;
+      searchInput.value = ''; closeSearch();
+    }
+  } else if (e.key === 'Escape') {
+    closeSearch(); searchInput.blur();
+  }
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) closeSearch();
+});
+
+searchDropdown.addEventListener('click', () => {
+  searchInput.value = ''; closeSearch();
+});
+
+// ── Routing ───────────────────────────────────────────────────────────────────
 window.addEventListener('hashchange', render);
 window.addEventListener('DOMContentLoaded', render);
 
@@ -296,6 +444,7 @@ function render() {
   const hash = window.location.hash.slice(1) || '/';
   const parts = hash.split('/').filter(Boolean);
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  closeSearch();
 
   if (!parts.length || parts[0] === '') return showHome();
   if (parts[0] === 'book')    return showBook(parts[1] || 'I');
@@ -307,41 +456,43 @@ function render() {
 // ── Pages ─────────────────────────────────────────────────────────────────────
 function showHome() {
   setBreadcrumb([]);
+  const total = DATA.entries.length;
+  const books = ['I','II','III','IV'].map(b => {
+    const range = BOOK_RANGES[b];
+    const count = range.reduce((n, r) => {
+      const ch = sortedChapters.find(c => chapterRoman(c) === r);
+      return n + (ch ? chapters[ch].length : 0);
+    }, 0);
+    const enabled = count > 0;
+    return `<a class="book-card${enabled ? '' : ' disabled'}" ${enabled ? `href="#/book/${b}"` : ''}>
+      <h3>Book ${b}</h3>
+      <p class="book-sub">${BOOK_TITLES[b]}</p>
+      <p class="book-count">${count ? `${count} definitions` : 'Not yet loaded'}</p>
+    </a>`;
+  }).join('');
+
   const p = document.getElementById('page-home');
   p.innerHTML = `
     <h1 class="page-title">Hobbes Dictionary</h1>
-    <p class="page-subtitle">Definitions from <em>Leviathan</em> (1651) — Select a book</p>
-    <div class="book-grid">
-      <a class="book-card" href="#/book/I">
-        <h3>Book I</h3>
-        <p class="book-sub">Of Man</p>
-        <p class="book-count">${DATA.entries.length} definitions &middot; 16 chapters</p>
-      </a>
-      <div class="book-card disabled">
-        <h3>Book II</h3><p class="book-sub">Of Commonwealth</p>
-        <p class="book-count">Upload PDF to enable</p>
-      </div>
-      <div class="book-card disabled">
-        <h3>Book III</h3><p class="book-sub">Of a Christian Commonwealth</p>
-        <p class="book-count">Upload PDF to enable</p>
-      </div>
-      <div class="book-card disabled">
-        <h3>Book IV</h3><p class="book-sub">Of the Kingdom of Darkness</p>
-        <p class="book-count">Upload PDF to enable</p>
-      </div>
-    </div>`;
+    <p class="page-subtitle">Definitions from <em>Leviathan</em> (1651) &mdash; Select a book</p>
+    <div class="book-grid">${books}</div>`;
   p.classList.add('active');
 }
 
 function showBook(book) {
-  setBreadcrumb([{label:'Book I: Of Man', href:'/book/I'}]);
+  const title = BOOK_TITLES[book] || '';
+  const range = BOOK_RANGES[book] || [];
+  const chs = sortedChapters.filter(c => range.includes(chapterRoman(c)));
+  const total = chs.reduce((n, c) => n + chapters[c].length, 0);
+
+  setBreadcrumb([{label:`Book ${book}: ${title}`, href:`/book/${book}`}]);
   const p = document.getElementById('page-book');
   p.innerHTML = `
     <a class="back-btn" href="#/">← Books</a>
-    <h1 class="page-title">Book I: Of Man</h1>
-    <p class="page-subtitle">${DATA.entries.length} definitions across 16 chapters</p>
+    <h1 class="page-title">Book ${book}: ${esc(title)}</h1>
+    <p class="page-subtitle">${total} definitions across ${chs.length} chapters</p>
     <div class="chapter-grid">
-      ${sortedChapters.map(ch => `
+      ${chs.map(ch => `
         <a class="chapter-card" href="#/chapter/${chapterRoman(ch)}">
           <span class="chapter-num">Ch.&nbsp;${chapterRoman(ch)}</span>
           <span class="chapter-title">${esc(chapterTitle(ch))}</span>
@@ -354,19 +505,21 @@ function showBook(book) {
 function showChapter(roman) {
   const chStr = sortedChapters.find(c => chapterRoman(c) === roman);
   if (!chStr) return showHome();
-  const entries = chapters[chStr];
+  const book = bookOfChapter(roman);
   const title = chapterTitle(chStr);
+  const ents  = chapters[chStr];
+
   setBreadcrumb([
-    {label:'Book I', href:'/book/I'},
+    {label:`Book ${book}`, href:`/book/${book}`},
     {label:`Ch. ${roman}: ${title}`, href:`/chapter/${roman}`}
   ]);
   const p = document.getElementById('page-chapter');
   p.innerHTML = `
-    <a class="back-btn" href="#/book/I">← Book I: Of Man</a>
+    <a class="back-btn" href="#/book/${book}">← Book ${book}: ${esc(BOOK_TITLES[book])}</a>
     <h1 class="page-title">Chapter ${roman}</h1>
-    <p class="page-subtitle">${esc(title)} &middot; ${entries.length} definitions</p>
+    <p class="page-subtitle">${esc(title)} &middot; ${ents.length} definitions</p>
     <ul class="def-list">
-      ${entries.map(e => `
+      ${ents.map(e => `
         <li><a class="def-item" href="#/term/${encodeURIComponent(e.slug)}">
           <div class="def-term">${esc(e.term)}</div>
           <div class="def-preview">${esc(e.definition.slice(0,130))}${e.definition.length>130?'&hellip;':''}</div>
@@ -376,33 +529,32 @@ function showChapter(roman) {
 }
 
 function showTerm(slug) {
-  const entries = slugIndex[slug];
-  if (!entries) return showHome();
-
-  // Use first entry for breadcrumb
-  const first = entries[0];
-  const roman = chapterRoman(first.chapter);
+  const ents = slugIndex[slug];
+  if (!ents) return showHome();
+  const first  = ents[0];
+  const roman  = chapterRoman(first.chapter);
+  const book   = bookOfChapter(roman);
   const title  = chapterTitle(first.chapter);
+  const allRefs = [...new Set(ents.flatMap(e => e.cross_refs))].sort();
+
   setBreadcrumb([
-    {label:'Book I', href:'/book/I'},
+    {label:`Book ${book}`, href:`/book/${book}`},
     {label:`Ch. ${roman}`, href:`/chapter/${roman}`},
-    {label: first.term, href:`/term/${slug}`}
+    {label:first.term, href:`/term/${slug}`}
   ]);
 
-  // Collect all unique cross_refs across all definitions of this term
-  const allRefs = [...new Set(entries.flatMap(e => e.cross_refs))].sort();
-
-  const blocksHtml = entries.map(e => {
+  const blocksHtml = ents.map(e => {
     const chRoman = chapterRoman(e.chapter);
-    const linked  = linkify(e.definition, e.cross_refs);
+    // Compact context: strip redundant prefixes, trim
+    const ctx = compactContext(e.context);
     return `
       <div class="def-block">
         <div class="def-chapter-label">
           <span><a href="#/chapter/${chRoman}">Chapter ${chRoman}: ${esc(chapterTitle(e.chapter))}</a></span>
-          <span>Page ${esc(e.page_number)}</span>
+          <span>p.&nbsp;${esc(e.page_number)}</span>
         </div>
-        <div class="def-body">${linked}</div>
-        ${e.context ? `<div class="def-context">${esc(e.context)}</div>` : ''}
+        <div class="def-body">${linkify(e.definition, e.cross_refs)}</div>
+        ${ctx ? `<div class="def-context">${esc(ctx)}</div>` : ''}
       </div>`;
   }).join('');
 
@@ -414,14 +566,13 @@ function showTerm(slug) {
           const rs = makeSlug(ref);
           return slugIndex[rs]
             ? `<a class="see-also-link" href="#/term/${encodeURIComponent(rs)}">${esc(ref)}</a>`
-            : `<span class="see-also-link" style="opacity:.4">${esc(ref)}</span>`;
+            : '';
         }).join('')}
       </div>
     </div>` : '';
 
-  // If multiple definitions, show how many
-  const multiNote = entries.length > 1
-    ? `<p class="page-subtitle">Defined in ${entries.length} chapters</p>` : '';
+  const multiNote = ents.length > 1
+    ? `<p class="page-subtitle">Defined in ${ents.length} chapters</p>` : '';
 
   const p = document.getElementById('page-term');
   p.innerHTML = `
@@ -436,41 +587,44 @@ function showTerm(slug) {
   window.scrollTo(0, 0);
 }
 
-// ── Linkify ───────────────────────────────────────────────────────────────────
+// ── Compact context ───────────────────────────────────────────────────────────
+function compactContext(ctx) {
+  if (!ctx) return '';
+  // Strip verbose prefixes, keep the substance
+  return ctx
+    .replace(/^marginal label:\s*['"]?/i, '')
+    .replace(/['"]?\s*[;\-—]\s*/, ' — ')
+    .replace(/;\s*/g, ' · ')
+    .replace(/^['"]|['"]$/g, '')
+    .trim();
+}
+
+// ── Linkify definition text ───────────────────────────────────────────────────
 function linkify(text, refs) {
   if (!refs || !refs.length) return esc(text);
-
-  // Sort longest first so multi-word terms match before their components
   const sorted = [...refs].sort((a,b) => b.length - a.length);
-  const spans = [];  // {start, end, ref}
-
+  const spans = [];
   for (const ref of sorted) {
     const rx = new RegExp('\\b' + escRe(ref) + '\\b', 'gi');
     let m;
     while ((m = rx.exec(text)) !== null) {
       const s = m.index, e = s + m[0].length;
-      if (!spans.some(x => s < x.end && e > x.start)) {
+      if (!spans.some(x => s < x.end && e > x.start))
         spans.push({start:s, end:e, matched:m[0], ref});
-      }
     }
   }
-
   if (!spans.length) return esc(text);
   spans.sort((a,b) => a.start - b.start);
-
   let out = '', last = 0;
   for (const {start, end, matched, ref} of spans) {
     out += esc(text.slice(last, start));
     const sl = makeSlug(ref);
-    if (slugIndex[sl]) {
-      out += `<a class="term-link" href="#/term/${encodeURIComponent(sl)}">${esc(matched)}</a>`;
-    } else {
-      out += esc(matched);
-    }
+    out += slugIndex[sl]
+      ? `<a class="term-link" href="#/term/${encodeURIComponent(sl)}">${esc(matched)}</a>`
+      : esc(matched);
     last = end;
   }
-  out += esc(text.slice(last));
-  return out;
+  return out + esc(text.slice(last));
 }
 
 // ── Breadcrumb ────────────────────────────────────────────────────────────────
@@ -495,4 +649,4 @@ with open(out_path, 'w', encoding='utf-8') as f:
     f.write(HTML)
 
 print(f"Built {out_path}")
-print(f"  {len(entries)} entries  |  {len(set(e['slug'] for e in entries))} unique terms  |  {len(set(e['chapter'] for e in entries))} chapters")
+print(f"  {len(entries)} entries · {len(set(e['slug'] for e in entries))} unique terms · {len(set(e['chapter'] for e in entries))} chapters")
