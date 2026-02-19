@@ -320,14 +320,14 @@ const BOOK_RANGES = {
 const BOOK_TITLES = { 'I':'Of Man', 'II':'Of Commonwealth', 'III':'Of a Christian Commonwealth', 'IV':'Of the Kingdom of Darkness', '1061':'Of the Class' };
 
 function chapterIdx(ch) {
-  const m = ch.match(/Chapter ([IVXLCDM]+|Intro):/);
+  const m = ch.match(/Chapter ([IVXLCDM]+|Intro|\d+):/);
   return m ? CHAPTER_ORDER.indexOf(m[1]) : 999;
 }
 function chapterRoman(ch) {
-  const m = ch.match(/Chapter ([IVXLCDM]+|Intro):/); return m ? m[1] : '';
+  const m = ch.match(/Chapter ([IVXLCDM]+|Intro|\d+):/); return m ? m[1] : '';
 }
 function chapterTitle(ch) {
-  const m = ch.match(/Chapter (?:[IVXLCDM]+|Intro): (.+)/); return m ? m[1] : ch;
+  const m = ch.match(/Chapter (?:[IVXLCDM]+|Intro|\d+): (.+)/); return m ? m[1] : ch;
 }
 function bookOfChapter(roman) {
   for (const [b, chs] of Object.entries(BOOK_RANGES)) {
